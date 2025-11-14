@@ -44,7 +44,7 @@ def args():
 
 
 def train(args):
-    exp_name = f"robertaIr{args.roberta_lr}_elseIr{args.else_lr}_hiddenDim{args.hidden_dim}_emotionDim{args.emotion_dim}_pauseDim{args.pause_dim}_head{args.heads}_localWindowNum{args.local_window_num}_dropout{args.dropout_rate}_BASELINE"
+    exp_name = f"robertaIr{args.roberta_lr}_elseIr{args.else_lr}_hiddenDim{args.hidden_dim}_emotionDim{args.emotion_dim}_pauseDim{args.pause_dim}_head{args.heads}_localWindowNum{args.local_window_num}_dropout{args.dropout_rate}_AddPause"
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = Model(
@@ -70,7 +70,10 @@ def train(args):
     encoder_param_ids = set(id(p) for p in model.text_encoder.parameters())
     if (args.pause_dim > 0):
         time_threshold_param = model.time_threshold
-        other_params = [p for p in model.parameters() if id(p) not in encoder_param_ids and p is not time_threshold_param and p]
+        other_params = [
+            p for p in model.parameters()
+            if id(p) not in encoder_param_ids and p is not time_threshold_param and p is not None
+        ]
         optimizer = torch.optim.AdamW([
             {"params": model.text_encoder.parameters(), "lr": float(args.roberta_lr)},   # RoBERTa 部分
             {"params": time_threshold_param, "lr": float(1e-3)},                         # time_threshold
@@ -119,7 +122,7 @@ def train(args):
 
         for batch in tqdm(train_dataloader):
             input_ids = batch["input_ids"].to(device)
-            time_mask = batch["time_mask"].to(device)   # (B, T_max)
+            time_mask = batch["time_mask"].to(device)           # (B, T_max)
             utt_mask = batch["utt_mask"].to(device)
             pauses = batch["pauses"].to(device)
             speakers = batch["speakers"].to(device)
@@ -128,8 +131,6 @@ def train(args):
             _, T_max, _ = input_ids.size()
             train_cache = None
             window_loss_lst = []   # Wステップごとのlossをためるリスト
-
-            # model.init_speaker_emotion(input_ids.size(0))
 
             for t in range(T_max):
                 input_ids_t = input_ids[:, t, :].contiguous()   # (B, U_max)
@@ -142,7 +143,7 @@ def train(args):
                 
                 # cache更新
                 if (train_cache is None):
-                    train_cache = global_x.unsqueeze(1)   # (B, 1, hidden)
+                    train_cache = global_x.unsqueeze(1)                                    # (B, 1, hidden)
                 else:
                     train_cache = torch.cat([train_cache, global_x.unsqueeze(1)], dim=1)   # (B, t+1, hidden)
 
@@ -164,7 +165,7 @@ def train(args):
                         optimizer.zero_grad(set_to_none=True)
 
                     train_cache = train_cache.detach()
-                    # model.detach_speaker_emotion()
+                    model.detach_speaker_emotion()
                     window_loss_lst = []
 
         scheduler.step()
@@ -187,7 +188,7 @@ def train(args):
         with torch.no_grad():
             for _, batch in enumerate(tqdm(val_dataloader)):
                 input_ids = batch["input_ids"].to(device)
-                time_mask = batch["time_mask"].to(device)   # (B, T_max)
+                time_mask = batch["time_mask"].to(device)           # (B, T_max)
                 utt_mask = batch["utt_mask"].to(device)
                 pauses = batch["pauses"].to(device)
                 speakers = batch["speakers"].to(device)
@@ -195,8 +196,6 @@ def train(args):
 
                 _, T_max, _ = input_ids.size()
                 val_cache = None
-
-                # model.init_speaker_emotion(input_ids.size(0))
 
                 for t in range(T_max):
                     input_ids_t = input_ids[:, t, :].contiguous()   # (B, U_max)
@@ -209,7 +208,7 @@ def train(args):
 
                     # cache更新
                     if (val_cache is None):
-                        val_cache = global_x.unsqueeze(1)   # (B, 1, hidden)
+                        val_cache = global_x.unsqueeze(1)                                  # (B, 1, hidden)
                     else:
                         val_cache = torch.cat([val_cache, global_x.unsqueeze(1)], dim=1)   # (B, t+1, hidden)
 

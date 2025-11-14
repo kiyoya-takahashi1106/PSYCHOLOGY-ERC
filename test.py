@@ -99,7 +99,6 @@ def train(args):
                     logits, global_x = model(t, input_ids_t, time_mask, utt_mask_t, pause_t, test_cache, speakers)
 
                 # cache更新
-                # global_x = global_x.detach()
                 if (test_cache is None):
                     test_cache = global_x.unsqueeze(1)   # (B, 1, hidden)
                 else:
