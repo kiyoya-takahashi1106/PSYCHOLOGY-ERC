@@ -8,14 +8,14 @@ ROBERTA_LR="2e-5"
 ELSE_LR="1e-4"
 HIDDEN_DIM=768
 EMOTION_DIM=64
-PAUSE_DIM=6              # PAUSE_DIM=0なら「間」情報を使わない
+PAUSE_DIM=0              # PAUSE_DIM=0なら「間」情報を使わない
 HEADS=6
 LOCAL_WINDOW_NUM=0       # LOCAL_WINDOW_NUM=0なら「LOCAL_Attn」を使わない
 DROPOUT_RATE=0.1
 
 
 # experiment name (used for log dirs)
-EXP_NAME="robertaIr${ROBERTA_LR}_elseIr${ELSE_LR}_hiddenDim${HIDDEN_DIM}_emotionDim${EMOTION_DIM}_pauseDim${PAUSE_DIM}_head${HEADS}_localWindowNum${LOCAL_WINDOW_NUM}_dropout${DROPOUT_RATE}_AddPause"
+EXP_NAME="robertaIr${ROBERTA_LR}_elseIr${ELSE_LR}_hiddenDim${HIDDEN_DIM}_emotionDim${EMOTION_DIM}_pauseDim${PAUSE_DIM}_head${HEADS}_localWindowNum${LOCAL_WINDOW_NUM}_dropout${DROPOUT_RATE}_BaseLine"
 
 # logs保存先
 TRAIN_LOG_DIR="logs/train/${DATASET_NAME}/${EXP_NAME}"
