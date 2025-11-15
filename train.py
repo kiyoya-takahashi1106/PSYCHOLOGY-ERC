@@ -44,7 +44,7 @@ def args():
 
 
 def train(args):
-    exp_name = f"robertaIr{args.roberta_lr}_elseIr{args.else_lr}_hiddenDim{args.hidden_dim}_emotionDim{args.emotion_dim}_pauseDim{args.pause_dim}_head{args.heads}_localWindowNum{args.local_window_num}_dropout{args.dropout_rate}_BaseLine"
+    exp_name = f"robertaIr{args.roberta_lr}_elseIr{args.else_lr}_hiddenDim{args.hidden_dim}_emotionDim{args.emotion_dim}_pauseDim{args.pause_dim}_head{args.heads}_localWindowNum{args.local_window_num}_dropout{args.dropout_rate}_AddInteraction"
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = Model(

@@ -15,7 +15,7 @@ DROPOUT_RATE=0.1
 
 
 # experiment name (used for log dirs)
-EXP_NAME="robertaIr${ROBERTA_LR}_elseIr${ELSE_LR}_hiddenDim${HIDDEN_DIM}_emotionDim${EMOTION_DIM}_pauseDim${PAUSE_DIM}_head${HEADS}_localWindowNum${LOCAL_WINDOW_NUM}_dropout${DROPOUT_RATE}_BaseLine"
+EXP_NAME="robertaIr${ROBERTA_LR}_elseIr${ELSE_LR}_hiddenDim${HIDDEN_DIM}_emotionDim${EMOTION_DIM}_pauseDim${PAUSE_DIM}_head${HEADS}_localWindowNum${LOCAL_WINDOW_NUM}_dropout${DROPOUT_RATE}_AddInteraction"
 
 # logs保存先
 TRAIN_LOG_DIR="logs/train/${DATASET_NAME}/${EXP_NAME}"

@@ -31,8 +31,6 @@ class Model(nn.Module):
             if any(f"encoder.layer.{i}." in n for i in [L-4, L - 3, L - 2, L - 1]):
                 p.requires_grad = True
 
-        # self.down_projection = nn.Linear(768, self.hidden_dim)
-
         if (pause_dim > 0):
             # 1x1 の学習可能な time 閾値パラメータ
             self.time_threshold = nn.Parameter(torch.tensor(0.0))
@@ -60,7 +58,7 @@ class Model(nn.Module):
                 nn.Linear(self.fusion_dim, self.fusion_dim),
             )
         
-        self.decoder = nn.Linear(self.fusion_dim + emotion_dim, num_classes)
+        self.decoder = nn.Linear(self.fusion_dim + self.emotion_dim*2, num_classes)
 
         # 感情ベクトル更新用のGRU
         self.speaker_gru = nn.GRUCell(self.fusion_dim, self.emotion_dim)
@@ -119,7 +117,6 @@ class Model(nn.Module):
 
         outputs = self.text_encoder(input_ids=input_ids_t, attention_mask=utt_mask_t)   # (B, U_max, 768)
         utterance_t = outputs.last_hidden_state[:, 0, :]                                # (B, 768)
-        # utterance_t = self.down_projection(utterance_t)                                 # (B, hidden_dim)
 
         if (self.pause_dim > 0):
             pause_t = torch.relu(pause_t - self.time_threshold)   # (B)
@@ -153,9 +150,10 @@ class Model(nn.Module):
         speaker_mask = (speaker_t == 1)     # (B)
         mask = speaker_mask.unsqueeze(-1)   # (B, 1)
         curr_speaker_emotion = torch.where(mask, self.speaker1_emotion, self.speaker0_emotion)   # (B, emotion_dim)
+        curr_listener_emotion = torch.where(mask, self.speaker0_emotion, self.speaker1_emotion)  # (B, emotion_dim)
 
         # 分類
-        logits = self.decoder(torch.cat([fusion_t, curr_speaker_emotion], dim=-1))               # (B, num_classes)
+        logits = self.decoder(torch.cat([fusion_t, curr_speaker_emotion, curr_listener_emotion], dim=-1))               # (B, num_classes)
 
         # 感情ベクトル更新
         self.renew_speaker_emotion(speaker_t, fusion_t)

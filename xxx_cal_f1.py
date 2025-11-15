@@ -3,7 +3,7 @@ import os, glob
 
 
 # ==== 読み込むログファイルをここで並べる ====
-dir_name = "robertaIr2e-5_elseIr1e-4_hiddenDim768_emotionDim64_pauseDim0_head6_localWindowNum0_dropout0.1_BaseLine"
+dir_name = "robertaIr2e-5_elseIr1e-4_hiddenDim768_emotionDim0_pauseDim6_head6_localWindowNum0_dropout0.1_DeleteEmotionAddPause"
 
 target = os.path.join("logs", "test", "IEMOCAP", dir_name)
 if (not os.path.isdir(target)):
