@@ -1,5 +1,5 @@
 # --- hyperparams / config (edit as needed) ---
-SEEDS=(38 39 45 46)
+SEEDS=(40 41 42 43 44)
 DATASET_NAME="IEMOCAP"
 CLASS_NUM=6
 EPOCHS=40

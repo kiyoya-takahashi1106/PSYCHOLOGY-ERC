@@ -42,6 +42,7 @@ def calculate_metrics(y_pred: list, y_true: list):
 
     # 全体のF1スコア
     metrics["f1_macro"] = f1_score(y_true, y_pred, average='macro')
+    metrics["f1_weighted"] = f1_score(y_true, y_pred, average='weighted')
 
     # 各クラスごとのF1スコア、正解数、サンプル数
     unique_classes = sorted(set(y_true) | set(y_pred))   # y_true と y_pred の両方を考慮

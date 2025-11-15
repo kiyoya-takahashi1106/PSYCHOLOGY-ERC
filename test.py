@@ -127,8 +127,10 @@ def train(args):
                     true.extend(true_labels)
 
     metrics = calculate_metrics(pred, true)
-    f1 = metrics['f1_macro']
-    tqdm.write(f"F1 Score: {f1:.4f}")
+    macro_f1 = metrics['f1_macro']
+    weighted_f1 = metrics['f1_weighted']
+    tqdm.write(f"Macro F1 Score: {macro_f1:.4f}")
+    tqdm.write(f"Weighted F1 Score: {weighted_f1:.4f}") 
     for i in range(args.num_classes):
         tqdm.write(f"{metrics[f'correct_num_class_{i}']} / {metrics[f'total_num_class_{i}']}  =>  f1: {metrics[f'f1_class_{i}']:.4f}")
 
