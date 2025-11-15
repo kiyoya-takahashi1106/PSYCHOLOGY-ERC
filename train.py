@@ -34,7 +34,7 @@ def args():
     parser.add_argument("--roberta_lr", type=str)
     parser.add_argument("--else_lr", type=str)
     parser.add_argument("--hidden_dim", type=int)
-    parser.add_argument("--emotion_dim", type=int)
+    parser.add_argument("--speaker_state_dim", type=int)
     parser.add_argument("--pause_dim", type=int)
     parser.add_argument("--heads", type=int)
     parser.add_argument("--local_window_num", type=int)
@@ -44,13 +44,13 @@ def args():
 
 
 def train(args):
-    exp_name = f"robertaIr{args.roberta_lr}_elseIr{args.else_lr}_hiddenDim{args.hidden_dim}_emotionDim{args.emotion_dim}_pauseDim{args.pause_dim}_head{args.heads}_localWindowNum{args.local_window_num}_dropout{args.dropout_rate}_AddPauseAddInteraction"
+    exp_name = f"robertaIr{args.roberta_lr}_elseIr{args.else_lr}_hiddenDim{args.hidden_dim}_speakerStateDim{args.speaker_state_dim}_pauseDim{args.pause_dim}_head{args.heads}_localWindowNum{args.local_window_num}_dropout{args.dropout_rate}_AddPause"
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = Model(
         num_classes=args.num_classes,
         hidden_dim=args.hidden_dim,
-        emotion_dim=args.emotion_dim,
+        speaker_state_dim=args.speaker_state_dim,
         pause_dim=args.pause_dim,
         heads=args.heads,
         local_window_num=args.local_window_num,
@@ -165,7 +165,7 @@ def train(args):
                         optimizer.zero_grad(set_to_none=True)
 
                     train_cache = train_cache.detach()
-                    model.detach_speaker_emotion()
+                    model.detach_speaker_state()
                     window_loss_lst = []
 
         scheduler.step()

@@ -9,19 +9,19 @@ from model.bi_channel_attention import BiChannelAttention
 
 
 class Model(nn.Module):
-    def __init__(self, num_classes: int, hidden_dim: int, emotion_dim: int, pause_dim: int, heads: int, local_window_num: int, dropout_rate: float, trained_filename: str = None):
+    def __init__(self, num_classes: int, hidden_dim: int, speaker_state_dim: int, pause_dim: int, heads: int, local_window_num: int, dropout_rate: float, trained_filename: str = None):
         super(Model, self).__init__()
         self.num_classes = num_classes
         self.hidden_dim = hidden_dim
-        self.emotion_dim = emotion_dim
+        self.speaker_state_dim = speaker_state_dim
         self.pause_dim = pause_dim
         self.heads = heads
         self.local_window_num = local_window_num
         self.dropout_rate = dropout_rate
 
-        # 感情ベクトル (B, emotion_dim)
-        self.speaker0_emotion = None
-        self.speaker1_emotion = None
+        # speaker状態 (B, emotion_dim)
+        self.speaker0_state = None
+        self.speaker1_state = None
 
         self.text_encoder = RobertaModel.from_pretrained('roberta-base', add_pooling_layer=False)
         for p in self.text_encoder.parameters():
@@ -58,12 +58,11 @@ class Model(nn.Module):
                 nn.Linear(self.fusion_dim, self.fusion_dim),
             )
         
-        self.decoder = nn.Linear(self.fusion_dim + self.emotion_dim*2, num_classes)
+        self.decoder = nn.Linear(self.fusion_dim + self.speaker_state_dim, num_classes)
 
-        # 感情ベクトル更新用のGRU
-        self.speaker_gru = nn.GRUCell(self.fusion_dim, self.emotion_dim)
-        self.listener_gru = nn.GRUCell(self.fusion_dim, self.emotion_dim)
-        # self.interaction_gru = nn.GRUCell(self.emotion_dim, self.emotion_dim)   # 聞き手の感情から話し手の感情へ影響を与える用
+        # speaker状態 更新用のGRU
+        self.speaker_gru = nn.GRUCell(self.fusion_dim, self.speaker_state_dim)
+        # self.listener_gru = nn.GRUCell(self.fusion_dim, self.speaker_state_dim)
         
         # test用に学習済みモデルをロード
         if (trained_filename is not None):
@@ -72,13 +71,13 @@ class Model(nn.Module):
             print(f"Loaded trained model from {file_path}")
 
 
-    def init_speaker_emotion(self, batch_size: int):
+    def init_speaker_state(self, batch_size: int):
         device = next(self.parameters()).device
-        self.speaker0_emotion = torch.zeros(batch_size, self.emotion_dim, device=device)   # (B, emotion_dim)
-        self.speaker1_emotion = torch.zeros(batch_size, self.emotion_dim, device=device)   # (B, emotion_dim)
+        self.speaker0_state = torch.zeros(batch_size, self.speaker_state_dim, device=device)   # (B, emotion_dim)
+        self.speaker1_state = torch.zeros(batch_size, self.speaker_state_dim, device=device)   # (B, emotion_dim)
 
 
-    def renew_speaker_emotion(self, speaker_t: torch.Tensor, fusion_t: torch.Tensor):
+    def renew_speaker_state(self, speaker_t: torch.Tensor, fusion_t: torch.Tensor):
         """
         入力:
         speaker_t: (B)  value 0 or 1
@@ -89,31 +88,30 @@ class Model(nn.Module):
         mask = speaker_mask.unsqueeze(-1)   # (B,1)
 
         # select current speaker and listener emotions per batch
-        curr_speaker_emotion = torch.where(mask, self.speaker1_emotion, self.speaker0_emotion)    # (B, emotion_dim)
-        curr_listener_emotion = torch.where(mask, self.speaker0_emotion, self.speaker1_emotion)   # (B, emotion_dim)
+        curr_speaker_state = torch.where(mask, self.speaker1_state, self.speaker0_state)    # (B, emotion_dim)
+        curr_listener_state = torch.where(mask, self.speaker0_state, self.speaker1_state)   # (B, emotion_dim)
 
-        # update emotions with GRUCell: input=gru_input, hx=current_emotion  
-        next_speaker_emotion = self.speaker_gru(fusion_t, curr_speaker_emotion)                    # (B, emotion_dim)
-        next_listener_emotion = self.listener_gru(fusion_t, curr_listener_emotion)                 # (B, emotion_dim)
-        # next_speaker_emotion = self.interaction_gru(next_listener_emotion, next_speaker_emotion)   # (B, emotion_dim)
+        # update state with GRUCell: input=gru_input, hx=current_emotion  
+        next_speaker_state = self.speaker_gru(fusion_t, curr_speaker_state)                    # (B, emotion_dim)
+        # next_listener_state = self.listener_gru(fusion_t, curr_listener_state)                 # (B, emotion_dim)
 
         # 更新
-        self.speaker0_emotion = torch.where(mask, next_listener_emotion, next_speaker_emotion)   # (B, emotion_dim)
-        self.speaker1_emotion = torch.where(mask, next_speaker_emotion, next_listener_emotion)   # (B, emotion_dim)
+        self.speaker0_state = torch.where(mask, curr_listener_state, next_speaker_state)   # (B, emotion_dim)
+        self.speaker1_state = torch.where(mask, next_speaker_state, curr_listener_state)   # (B, emotion_dim)
 
 
-    def detach_speaker_emotion(self):
-        self.speaker0_emotion = self.speaker0_emotion.detach()
-        self.speaker1_emotion = self.speaker1_emotion.detach()
+    def detach_speaker_state(self):
+        self.speaker0_state = self.speaker0_state.detach()
+        self.speaker1_state = self.speaker1_state.detach()
 
 
     def forward(self, t: int, input_ids_t: torch.Tensor, time_mask: torch.Tensor, utt_mask_t: torch.Tensor, pause_t: torch.Tensor, cache: torch.Tensor, speakers: torch.Tensor) -> torch.Tensor:
         speaker_t = speakers[:, t].contiguous()   # (B)
 
-        # 感情ベクトル初期化
+        # speaker状態初期化
         if (t == 0):
             batch_size = input_ids_t.size(0)
-            self.init_speaker_emotion(batch_size)
+            self.init_speaker_state(batch_size)
 
         outputs = self.text_encoder(input_ids=input_ids_t, attention_mask=utt_mask_t)   # (B, U_max, 768)
         utterance_t = outputs.last_hidden_state[:, 0, :]                                # (B, 768)
@@ -146,16 +144,16 @@ class Model(nn.Module):
             fusion_t = self.fusion_norm(fusion_t)               # (B, (hidden_dim + pause_dim*heads)*4)
             fusion_t = self.fusion_feed_forward(fusion_t)       # (B, hidden_dim + pause_dim*heads)       
 
-        # 感情ベクトル
+        # speaker状態
         speaker_mask = (speaker_t == 1)     # (B)
         mask = speaker_mask.unsqueeze(-1)   # (B, 1)
-        curr_speaker_emotion = torch.where(mask, self.speaker1_emotion, self.speaker0_emotion)   # (B, emotion_dim)
-        curr_listener_emotion = torch.where(mask, self.speaker0_emotion, self.speaker1_emotion)  # (B, emotion_dim)
+        curr_speaker_state = torch.where(mask, self.speaker1_state, self.speaker0_state)   # (B, emotion_dim)
+        curr_listener_state = torch.where(mask, self.speaker0_state, self.speaker1_state)  # (B, emotion_dim)
+
+        # speaker状態更新
+        self.renew_speaker_state(speaker_t, fusion_t)
 
         # 分類
-        logits = self.decoder(torch.cat([fusion_t, curr_speaker_emotion, curr_listener_emotion], dim=-1))               # (B, num_classes)
-
-        # 感情ベクトル更新
-        self.renew_speaker_emotion(speaker_t, fusion_t)
+        logits = self.decoder(torch.cat([fusion_t, curr_speaker_state], dim=-1))               # (B, num_classes)
 
         return logits, global_t

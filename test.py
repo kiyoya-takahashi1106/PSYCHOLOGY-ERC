@@ -29,7 +29,7 @@ def args():
     parser.add_argument("--num_classes", type=int)
     parser.add_argument("--batch_size", type=int)
     parser.add_argument("--hidden_dim", type=int)
-    parser.add_argument("--emotion_dim", type=int)
+    parser.add_argument("--speaker_state_dim", type=int)
     parser.add_argument("--pause_dim", type=int)
     parser.add_argument("--heads", type=int)
     parser.add_argument("--local_window_num", type=int)
@@ -44,7 +44,7 @@ def train(args):
     model = Model(
         num_classes=args.num_classes,
         hidden_dim=args.hidden_dim,
-        emotion_dim=args.emotion_dim,
+        speaker_state_dim=args.speaker_state_dim,
         pause_dim=args.pause_dim,
         heads=args.heads,
         local_window_num=args.local_window_num,
