@@ -3,7 +3,7 @@ import os, glob
 
 
 # ==== 読み込むログファイルをここで並べる ====
-dir_name = "robertaIr2e-5_elseIr1e-4_hiddenDim768_emotionDim0_pauseDim6_head6_localWindowNum0_dropout0.1_DeleteEmotionAddPause"
+dir_name = "robertaIr2e-5_elseIr1e-4_hiddenDim768_emotionDim0_pauseDim0_head6_localWindowNum0_dropout0.1_DeleteEmotion"
 
 target = os.path.join("logs", "test", "IEMOCAP", dir_name)
 if (not os.path.isdir(target)):
@@ -74,3 +74,5 @@ for i, c in enumerate(per_cls):
 
 if (thresholds):
     print(f"Learned time threshold: {mean_std(thresholds)}")
+else:
+    print("Learned time threshold: N/A")
