@@ -31,7 +31,7 @@ class Model(nn.Module):
             if any(f"encoder.layer.{i}." in n for i in [L-4, L - 3, L - 2, L - 1]):
                 p.requires_grad = True
 
-        self.down_projection = nn.Linear(768, self.hidden_dim)
+        # self.down_projection = nn.Linear(768, self.hidden_dim)
 
         if (pause_dim > 0):
             # 1x1 の学習可能な time 閾値パラメータ
@@ -119,7 +119,7 @@ class Model(nn.Module):
 
         outputs = self.text_encoder(input_ids=input_ids_t, attention_mask=utt_mask_t)   # (B, U_max, 768)
         utterance_t = outputs.last_hidden_state[:, 0, :]                                # (B, 768)
-        utterance_t = self.down_projection(utterance_t)                                 # (B, hidden_dim)
+        # utterance_t = self.down_projection(utterance_t)                                 # (B, hidden_dim)
 
         if (self.pause_dim > 0):
             pause_t = torch.relu(pause_t - self.time_threshold)   # (B)
