@@ -175,7 +175,7 @@ def train(args):
                         optimizer.zero_grad(set_to_none=True)
 
                     train_cache = train_cache.detach()
-                    model.detach_speaker_state()
+                    model.detach_state()
                     window_loss_lst = []
 
         scheduler.step()

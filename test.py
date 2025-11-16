@@ -12,7 +12,6 @@ import numpy as np
 from tqdm import tqdm
 from collections import Counter
 
-# from model.test_model import Model
 from model.model import Model
 from utils.utility import set_seed
 from utils.dataset import Dataset
