@@ -73,9 +73,9 @@ class SingleHeadBiChannelAttention(nn.Module):
         self.utterance_q = nn.Linear(head_utterance_dim, head_utterance_dim)
         self.utterance_k = nn.Linear(head_utterance_dim, head_utterance_dim)
         self.utterance_v = nn.Linear(head_utterance_dim, head_utterance_dim)
-        self.pause_q = nn.Linear(head_time_dim, head_time_dim)
-        self.pause_k = nn.Linear(head_time_dim, head_time_dim)
-        self.pause_v = nn.Linear(head_time_dim, head_time_dim)
+        self.speed_q = nn.Linear(head_time_dim, head_time_dim)
+        self.speed_k = nn.Linear(head_time_dim, head_time_dim)
+        self.speed_v = nn.Linear(head_time_dim, head_time_dim)
 
         self.position_parameter = position_parameter
 
@@ -89,29 +89,29 @@ class SingleHeadBiChannelAttention(nn.Module):
             time_mask_t:     (B, T_max)
             cache_t_chunk:   (B, t, D/head + time_dim)
         """
-        # cache_t_chunkとcontent_t_chunkをutteranceとpauseで分割, cache_t_chunkにcontent_t_chunkを追加
-        utterance_t_chunk, pause_t_chunk = torch.split(content_t_chunk, [self.head_utterance_dim, self.head_time_dim], dim=-1)                 # (B, D/head), (B, time_dim)
+        # cache_t_chunkとcontent_t_chunkをutteranceとspeedで分割, cache_t_chunkにcontent_t_chunkを追加
+        utterance_t_chunk, speed_t_chunk = torch.split(content_t_chunk, [self.head_utterance_dim, self.head_time_dim], dim=-1)                 # (B, D/head), (B, time_dim)
         if (cache_t_chunk is not None):
-            cache_t_utterance_chunk, cache_t_pause_chunk = torch.split(cache_t_chunk, [self.head_utterance_dim, self.head_time_dim], dim=-1)   # (B, t, D/head), (B, t, time_dim)
+            cache_t_utterance_chunk, cache_t_speed_chunk = torch.split(cache_t_chunk, [self.head_utterance_dim, self.head_time_dim], dim=-1)   # (B, t, D/head), (B, t, time_dim)
             cache_t_utterance_chunk = torch.cat([cache_t_utterance_chunk, utterance_t_chunk.unsqueeze(1)], dim=1)                               # (B, t+1, D/head)
-            cache_t_pause_chunk = torch.cat([cache_t_pause_chunk, pause_t_chunk.unsqueeze(1)], dim=1)                                           # (B, t+1, time_dim)
+            cache_t_speed_chunk = torch.cat([cache_t_speed_chunk, speed_t_chunk.unsqueeze(1)], dim=1)                                           # (B, t+1, time_dim)
         else:
             cache_t_utterance_chunk = utterance_t_chunk.unsqueeze(1)   # (B, 1, D/head)
-            cache_t_pause_chunk = pause_t_chunk.unsqueeze(1)           # (B, 1, time_dim)
+            cache_t_speed_chunk = speed_t_chunk.unsqueeze(1)           # (B, 1, time_dim)
 
         utterance_q = self.utterance_q(utterance_t_chunk)
-        pause_q = self.pause_q(pause_t_chunk)
-        q_t = torch.cat([utterance_q, pause_q], dim=-1)   # (B, D/head + time_dim)
+        speed_q = self.speed_q(speed_t_chunk)
+        q_t = torch.cat([utterance_q, speed_q], dim=-1)   # (B, D/head + time_dim)
         q_t = q_t.unsqueeze(1)                            # (B, 1, D/head + time_dim)
 
         utterance_k = self.utterance_k(cache_t_utterance_chunk)
-        pause_k = self.pause_k(cache_t_pause_chunk)
-        k = torch.cat([utterance_k, pause_k], dim=-1)     # (B, t+1, D/head + time_dim)
+        speed_k = self.speed_k(cache_t_speed_chunk)
+        k = torch.cat([utterance_k, speed_k], dim=-1)     # (B, t+1, D/head + time_dim)
         k= k.transpose(1, 2)                              # (B, D/head + time_dim, t+1)
 
         utterance_v = self.utterance_v(cache_t_utterance_chunk)
-        pause_v = self.pause_v(cache_t_pause_chunk)
-        v = torch.cat([utterance_v, pause_v], dim=-1)     # (B, t+1, D/head + time_dim)
+        speed_v = self.speed_v(cache_t_speed_chunk)
+        v = torch.cat([utterance_v, speed_v], dim=-1)     # (B, t+1, D/head + time_dim)
 
         # 1✕t attention map
         attention_map = torch.bmm(q_t, k)          # (B, 1, t+1)

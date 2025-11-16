@@ -105,7 +105,7 @@ class Model(nn.Module):
         self.speaker1_state = self.speaker1_state.detach()
 
 
-    def forward(self, t: int, input_ids_t: torch.Tensor, time_mask: torch.Tensor, utt_mask_t: torch.Tensor, pause_t: torch.Tensor, cache: torch.Tensor, speakers: torch.Tensor) -> torch.Tensor:
+    def forward(self, t: int, input_ids_t: torch.Tensor, time_mask: torch.Tensor, utt_mask_t: torch.Tensor, speed_t: torch.Tensor, pause_t: torch.Tensor, cache: torch.Tensor, speakers: torch.Tensor) -> torch.Tensor:
         speaker_t = speakers[:, t].contiguous()   # (B)
 
         # speaker状態初期化
@@ -117,15 +117,15 @@ class Model(nn.Module):
         utterance_t = outputs.last_hidden_state[:, 0, :]                                # (B, 768)
 
         if (self.time_dim > 0):
-            # pause_t = torch.relu(pause_t - self.time_threshold)   # (B)
-            pause_t = self.time_encoder(pause_t)                  # (B, time_dim)
+            # speed_t = torch.relu(speed_t - self.time_threshold)   # (B)
+            speed_t = self.time_encoder(speed_t)                    # (B, time_dim)
         else:
-            pause_t = None
+            speed_t = None
 
         # 形を整形
         utterance_t_chunks = torch.chunk(utterance_t, self.heads, dim=-1)                                # (head, B, hidden_dim/head)
         if (self.time_dim > 0):
-            per_head_content_t = [torch.cat([chunk, pause_t], dim=-1) for chunk in utterance_t_chunks]   # (head, B, hidden_dim/head + time_dim)
+            per_head_content_t = [torch.cat([chunk, speed_t], dim=-1) for chunk in utterance_t_chunks]   # (head, B, hidden_dim/head + time_dim)
         else:
             per_head_content_t = [chunk for chunk in utterance_t_chunks]                                 # (head, B, hidden_dim/head)
         content_t = torch.cat(per_head_content_t, dim=-1)                                                # (B, (hidden_dim/head + time_dim)*heads)  =  (B, hidden_dim + time_dim*heads)

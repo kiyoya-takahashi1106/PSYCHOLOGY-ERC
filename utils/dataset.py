@@ -18,9 +18,9 @@ import json
         # 会話1
         [ 
             # 発話1
-            {"input_ids": [tokenizeから返ってくるid], "pause": pause(秒数), "speaker": sex, "label": label},
+            {"input_ids": [tokenizeから返ってくるid], "speed": speed(秒数), "pause": pause(秒数), "speaker": sex, "label": label},
             # 発話2
-            {"input_ids": [tokenizeから返ってくるid], "pause": pause(秒数), "speaker": sex, "label": label},
+            {"input_ids": [tokenizeから返ってくるid], "speed": speed(秒数), "pause": pause(秒数), "speaker": sex, "label": label},
             ...
         ], 
         ...
@@ -66,7 +66,7 @@ class Dataset(torch.utils.data.Dataset):
 
         for _, utterance_lst in self.data_dct.items():
             conv_data = []   # 1会話分の発話数
-            # prev_end_time = 0.0
+            prev_end_time = 0.0
 
             for i, utterance_file in enumerate(utterance_lst):
                 file_path = f"{self.data_dir_path}/{utterance_file}.json"
@@ -94,17 +94,18 @@ class Dataset(torch.utils.data.Dataset):
                     return_attention_mask=False,
                 )
 
-                # if (i == 0):
-                #     pause = 0.0
-                # else:
-                #     pause = start_time - prev_end_time
-                # prev_end_time = end_time
-
+                # speedの計算
                 char_num = 0
                 for word in utterance.split():
                     char_num += len(word)
-                    
                 speed = (end_time - start_time) / char_num
+
+                # pauseの計算
+                if (i == 0):
+                    pause = 0.0
+                else:
+                    pause = start_time - prev_end_time
+                prev_end_time = end_time
 
                 if (emotion in self.emotion2label):
                     label = self.emotion2label[emotion]
@@ -112,7 +113,7 @@ class Dataset(torch.utils.data.Dataset):
                     label = self.ignore_label   # 無視ラベル
 
                 # conv_data.append({"input_ids": tokenizer_output["input_ids"], "pause": pause, "speaker": sex, "label": label})
-                conv_data.append({"input_ids": tokenizer_output["input_ids"], "pause": speed, "speaker": sex, "label": label})
+                conv_data.append({"input_ids": tokenizer_output["input_ids"], "speed": speed, "pause": pause, "speaker": sex, "label": label})
             data.append(conv_data)
             
         return data

@@ -13,12 +13,13 @@ class CollateFn:
 
         """
             batch: list[conv], 
-            conv: list[{"input_ids": List[int], "pause": float, "label": int}]
+            conv: list[{"input_ids": List[int], "speed": float, "pause": float, "label": int}]
             
             出力:
             input_ids:      (B, T_max, U_max)  long
             time_mask:      (B, T_max)         bool  (True=valid)
             utt_mask:       (B, T_max, U_max)  bool  (True=valid)
+            speeds:         (B, T_max)         float
             pauses:         (B, T_max)         float
             speakers:       (B, T_max)         long
             labels:         (B, T_max)         long  (-100 は無視)
@@ -32,6 +33,7 @@ class CollateFn:
         input_ids   = torch.full((B, T_max, U_max), self.pad_id, dtype=torch.long)
         time_mask   = torch.zeros((B, T_max), dtype=torch.bool)
         utt_mask    = torch.zeros((B, T_max, U_max), dtype=torch.bool)
+        speeds      = torch.zeros((B, T_max), dtype=torch.float)
         pauses      = torch.zeros((B, T_max), dtype=torch.float)
         speakers    = torch.full((B, T_max), self.pad_speaker_id, dtype=torch.long)
         labels      = torch.full((B, T_max), self.label_pad_value, dtype=torch.long)
@@ -44,6 +46,7 @@ class CollateFn:
                     input_ids[i, j, :L] = torch.tensor(ids[:L])
                     utt_mask[i, j, :L] = True
                 time_mask[i, j] = True
+                speeds[i, j] = float(utt["speed"])
                 pauses[i, j] = float(utt["pause"])
                 speakers[i, j] = self.speaker2id[str(utt["speaker"])]
                 labels[i, j] = int(utt["label"])
@@ -52,6 +55,7 @@ class CollateFn:
             "input_ids": input_ids,             # (B, T_max, U_max)
             "time_mask": time_mask,             # (B, T_max)
             "utt_mask": utt_mask,               # (B, T_max, U_max)
+            "speeds": speeds,                   # (B, T_max)
             "pauses": pauses,                   # (B, T_max)
             "speakers": speakers,               # (B, T_max)
             "labels": labels,                   # (B, T_max)

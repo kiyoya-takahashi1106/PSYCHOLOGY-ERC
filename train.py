@@ -129,6 +129,7 @@ def train(args):
             input_ids = batch["input_ids"].to(device)
             time_mask = batch["time_mask"].to(device)           # (B, T_max)
             utt_mask = batch["utt_mask"].to(device)
+            speeds = batch["speeds"].to(device)
             pauses = batch["pauses"].to(device)
             speakers = batch["speakers"].to(device)
             labels = batch["labels"].to(device)
@@ -140,11 +141,15 @@ def train(args):
             for t in range(T_max):
                 input_ids_t = input_ids[:, t, :].contiguous()   # (B, U_max)
                 utt_mask_t = utt_mask[:, t, :].contiguous()     # (B, U_max)
-                pause_t = pauses[:, t].contiguous()             # (B)
+                speed_t = speeds[:, t].contiguous()             # (B)
+                if (t + 1 < T_max):
+                    pause_t = pauses[:, t+1].contiguous()       # (B)
+                else:
+                    pause_t = None                              # ダミー
                 label_t = labels[:, t].contiguous()             # (B)
 
                 with autocast():
-                    logits, global_x = model(t, input_ids_t, time_mask, utt_mask_t, pause_t, train_cache, speakers)
+                    logits, global_x = model(t, input_ids_t, time_mask, utt_mask_t, speed_t, pause_t, train_cache, speakers)
                 
                 # cache更新
                 if (train_cache is None):
@@ -195,6 +200,7 @@ def train(args):
                 input_ids = batch["input_ids"].to(device)
                 time_mask = batch["time_mask"].to(device)           # (B, T_max)
                 utt_mask = batch["utt_mask"].to(device)
+                speeds = batch["speeds"].to(device)
                 pauses = batch["pauses"].to(device)
                 speakers = batch["speakers"].to(device)
                 labels = batch["labels"].to(device)
@@ -205,11 +211,15 @@ def train(args):
                 for t in range(T_max):
                     input_ids_t = input_ids[:, t, :].contiguous()   # (B, U_max)
                     utt_mask_t = utt_mask[:, t, :].contiguous()     # (B, U_max)
-                    pause_t = pauses[:, t].contiguous()             # (B)
+                    speed_t = speeds[:, t].contiguous()             # (B)
+                    if (t + 1 < T_max):
+                        pause_t = pauses[:, t+1].contiguous()       # (B)
+                    else:
+                        pause_t = None                              # ダミー
                     label_t = labels[:, t].contiguous()             # (B)
 
                     with autocast():
-                        logits, global_x = model(t, input_ids_t, time_mask, utt_mask_t, pause_t, val_cache, speakers)
+                        logits, global_x = model(t, input_ids_t, time_mask, utt_mask_t, speed_t, pause_t, val_cache, speakers)
 
                     # cache更新
                     if (val_cache is None):
