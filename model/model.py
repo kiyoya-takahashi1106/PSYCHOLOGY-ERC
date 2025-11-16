@@ -9,12 +9,12 @@ from model.bi_channel_attention import BiChannelAttention
 
 
 class Model(nn.Module):
-    def __init__(self, num_classes: int, hidden_dim: int, speaker_state_dim: int, pause_dim: int, heads: int, local_window_num: int, dropout_rate: float, trained_filename: str = None):
+    def __init__(self, num_classes: int, hidden_dim: int, speaker_state_dim: int, time_dim: int, heads: int, local_window_num: int, dropout_rate: float, trained_filename: str = None):
         super(Model, self).__init__()
         self.num_classes = num_classes
         self.hidden_dim = hidden_dim
         self.speaker_state_dim = speaker_state_dim
-        self.pause_dim = pause_dim
+        self.time_dim = time_dim
         self.heads = heads
         self.local_window_num = local_window_num
         self.dropout_rate = dropout_rate
@@ -31,16 +31,16 @@ class Model(nn.Module):
             if any(f"encoder.layer.{i}." in n for i in [L-4, L - 3, L - 2, L - 1]):
                 p.requires_grad = True
 
-        if (pause_dim > 0):
+        if (time_dim > 0):
             # 1x1 の学習可能な time 閾値パラメータ
             # self.time_threshold = nn.Parameter(torch.tensor(0.0))
-            self.time_encoder = Time2Vec(pause_dim=pause_dim)
+            self.time_encoder = Time2Vec(time_dim=time_dim)
 
-        self.global_attention_1 = BiChannelAttention(heads, self.hidden_dim, pause_dim, "global", 0, dropout_rate)
+        self.global_attention_1 = BiChannelAttention(heads, self.hidden_dim, time_dim, "global", 0, dropout_rate)
         if (local_window_num > 0):
-            self.local_attention_1 = BiChannelAttention(heads, self.hidden_dim, pause_dim, "local", local_window_num, dropout_rate)        
+            self.local_attention_1 = BiChannelAttention(heads, self.hidden_dim, time_dim, "local", local_window_num, dropout_rate)        
 
-        self.fusion_dim = self.hidden_dim + self.pause_dim*self.heads
+        self.fusion_dim = self.hidden_dim + self.time_dim*self.heads
         
         self.fusion_norm = nn.LayerNorm(self.fusion_dim)
         if (local_window_num > 0):
@@ -116,33 +116,33 @@ class Model(nn.Module):
         outputs = self.text_encoder(input_ids=input_ids_t, attention_mask=utt_mask_t)   # (B, U_max, 768)
         utterance_t = outputs.last_hidden_state[:, 0, :]                                # (B, 768)
 
-        if (self.pause_dim > 0):
+        if (self.time_dim > 0):
             # pause_t = torch.relu(pause_t - self.time_threshold)   # (B)
-            pause_t = self.time_encoder(pause_t)                  # (B, pause_dim)
+            pause_t = self.time_encoder(pause_t)                  # (B, time_dim)
         else:
             pause_t = None
 
         # 形を整形
         utterance_t_chunks = torch.chunk(utterance_t, self.heads, dim=-1)                                # (head, B, hidden_dim/head)
-        if (self.pause_dim > 0):
-            per_head_content_t = [torch.cat([chunk, pause_t], dim=-1) for chunk in utterance_t_chunks]   # (head, B, hidden_dim/head + pause_dim)
+        if (self.time_dim > 0):
+            per_head_content_t = [torch.cat([chunk, pause_t], dim=-1) for chunk in utterance_t_chunks]   # (head, B, hidden_dim/head + time_dim)
         else:
             per_head_content_t = [chunk for chunk in utterance_t_chunks]                                 # (head, B, hidden_dim/head)
-        content_t = torch.cat(per_head_content_t, dim=-1)                                                # (B, (hidden_dim/head + pause_dim)*heads)  =  (B, hidden_dim + pause_dim*heads)
+        content_t = torch.cat(per_head_content_t, dim=-1)                                                # (B, (hidden_dim/head + time_dim)*heads)  =  (B, hidden_dim + time_dim*heads)
 
-        global_t = self.global_attention_1(t, content_t, time_mask, cache, speakers)                     # (B, hidden_dim + pause_dim*heads)
+        global_t = self.global_attention_1(t, content_t, time_mask, cache, speakers)                     # (B, hidden_dim + time_dim*heads)
         if (self.local_window_num > 0):
-            local_t = self.local_attention_1(t, content_t, time_mask, cache, speakers)                   # (B, hidden_dim + pause_dim*heads)
+            local_t = self.local_attention_1(t, content_t, time_mask, cache, speakers)                   # (B, hidden_dim + time_dim*heads)
 
         # 2つのattention特徴のfusion
         if (self.local_window_num > 0):
-            fusion_t = torch.cat([global_t, local_t], dim=-1)   # (B, (hidden_dim + pause_dim*heads)*2)
-            fusion_t = self.fusion_norm(fusion_t)               # (B, (hidden_dim + pause_dim*heads)*4)
-            fusion_t = self.fusion_feed_forward(fusion_t)       # (B, hidden_dim + pause_dim*heads)
+            fusion_t = torch.cat([global_t, local_t], dim=-1)   # (B, (hidden_dim + time_dim*heads)*2)
+            fusion_t = self.fusion_norm(fusion_t)               # (B, (hidden_dim + time_dim*heads)*4)
+            fusion_t = self.fusion_feed_forward(fusion_t)       # (B, hidden_dim + time_dim*heads)
         else:
-            fusion_t = global_t                                 # (B, hidden_dim + pause_dim*heads)
-            fusion_t = self.fusion_norm(fusion_t)               # (B, (hidden_dim + pause_dim*heads)*4)
-            fusion_t = self.fusion_feed_forward(fusion_t)       # (B, hidden_dim + pause_dim*heads)       
+            fusion_t = global_t                                 # (B, hidden_dim + time_dim*heads)
+            fusion_t = self.fusion_norm(fusion_t)               # (B, (hidden_dim + time_dim*heads)*4)
+            fusion_t = self.fusion_feed_forward(fusion_t)       # (B, hidden_dim + time_dim*heads)       
 
         # speaker状態
         speaker_mask = (speaker_t == 1)     # (B)

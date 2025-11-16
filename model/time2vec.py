@@ -3,15 +3,15 @@ import torch.nn as nn
 
 
 class Time2Vec(nn.Module):
-    def __init__(self, pause_dim: int):
+    def __init__(self, time_dim: int):
         super(Time2Vec, self).__init__()
-        self.pause_dim = pause_dim
+        self.time_dim = time_dim
 
         self.weight_linear = nn.Parameter(torch.randn(1, 1))
         self.bias_linear = nn.Parameter(torch.randn(1, 1))
 
-        self.weight_periodic = nn.Parameter(torch.randn(1, pause_dim - 1))
-        self.bias_periodic = nn.Parameter(torch.randn(1, pause_dim - 1))
+        self.weight_periodic = nn.Parameter(torch.randn(1, time_dim - 1))
+        self.bias_periodic = nn.Parameter(torch.randn(1, time_dim - 1))
 
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -19,7 +19,7 @@ class Time2Vec(nn.Module):
         入力:
             x: (B)  # 時間情報
         出力:
-            time2vec_output: (B, pause_dim)
+            time2vec_output: (B, time_dim)
         """
         x = x.unsqueeze(-1)
 

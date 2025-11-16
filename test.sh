@@ -7,14 +7,14 @@ ROBERTA_LR="2e-5"
 ELSE_LR="1e-4"
 HIDDEN_DIM=768
 SPEAKER_STATE_DIM=328
-PAUSE_DIM=0         # PAUSE_DIM=0なら「間」情報を使わない
+TIME_DIM=0         # TIME_DIM=0なら「間」情報を使わない
 HEADS=6
 LOCAL_WINDOW_NUM=0
 DROPOUT_RATE=0.1
 
 
 # experiment name (used for log dirs)
-EXP_NAME="robertaIr${ROBERTA_LR}_elseIr${ELSE_LR}_hiddenDim${HIDDEN_DIM}_speakerStateDim${SPEAKER_STATE_DIM}_pauseDim${PAUSE_DIM}_head${HEADS}_localWindowNum${LOCAL_WINDOW_NUM}_dropout${DROPOUT_RATE}_AddPause"
+EXP_NAME="robertaIr${ROBERTA_LR}_elseIr${ELSE_LR}_hiddenDim${HIDDEN_DIM}_speakerStateDim${SPEAKER_STATE_DIM}_timeDim${TIME_DIM}_head${HEADS}_localWindowNum${LOCAL_WINDOW_NUM}_dropout${DROPOUT_RATE}_AddPause"
 
 # logs保存先
 TEST_LOG_DIR="logs/test/${DATASET_NAME}/${EXP_NAME}"
@@ -37,7 +37,7 @@ for SEED in "${SEEDS[@]}"; do
         --batch_size "${BATCH_SIZE}" \
         --hidden_dim "${HIDDEN_DIM}" \
         --speaker_state_dim "${SPEAKER_STATE_DIM}" \
-        --pause_dim "${PAUSE_DIM}" \
+        --time_dim "${TIME_DIM}" \
         --heads "${HEADS}" \
         --local_window_num "${LOCAL_WINDOW_NUM}" \
         --dropout_rate "${DROPOUT_RATE}" \

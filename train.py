@@ -35,7 +35,7 @@ def args():
     parser.add_argument("--else_lr", type=str)
     parser.add_argument("--hidden_dim", type=int)
     parser.add_argument("--speaker_state_dim", type=int)
-    parser.add_argument("--pause_dim", type=int)
+    parser.add_argument("--time_dim", type=int)
     parser.add_argument("--heads", type=int)
     parser.add_argument("--local_window_num", type=int)
     parser.add_argument("--dropout_rate", type=float)
@@ -44,14 +44,14 @@ def args():
 
 
 def train(args):
-    exp_name = f"robertaIr{args.roberta_lr}_elseIr{args.else_lr}_hiddenDim{args.hidden_dim}_speakerStateDim{args.speaker_state_dim}_pauseDim{args.pause_dim}_head{args.heads}_localWindowNum{args.local_window_num}_dropout{args.dropout_rate}_AddPauseAddSpeed2"
+    exp_name = f"robertaIr{args.roberta_lr}_elseIr{args.else_lr}_hiddenDim{args.hidden_dim}_speakerStateDim{args.speaker_state_dim}_timeDim{args.time_dim}_head{args.heads}_localWindowNum{args.local_window_num}_dropout{args.dropout_rate}_BaseLine"
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = Model(
         num_classes=args.num_classes,
         hidden_dim=args.hidden_dim,
         speaker_state_dim=args.speaker_state_dim,
-        pause_dim=args.pause_dim,
+        time_dim=args.time_dim,
         heads=args.heads,
         local_window_num=args.local_window_num,
         dropout_rate=args.dropout_rate
@@ -73,7 +73,7 @@ def train(args):
         {"params": model.text_encoder.parameters(), "lr": float(args.roberta_lr)},   # RoBERTa 部分
         {"params": other_params, "lr": float(args.else_lr)}                          # それ以外
     ], betas=(0.9, 0.999), weight_decay=5e-3)
-    # if (args.pause_dim > 0):
+    # if (args.time_dim > 0):
     #     time_threshold_param = model.time_threshold
     #     other_params = [
     #         p for p in model.parameters()
@@ -238,7 +238,7 @@ def train(args):
         #     tqdm.write(f"{metrics[f'correct_num_class_{i}']} / {metrics[f'total_num_class_{i}']}  =>  f1: {metrics[f'f1_class_{i}']:.4f}")
 
         # 学習可能パラメーター表示
-        # if (args.pause_dim > 0):
+        # if (args.time_dim > 0):
         #     tqdm.write(f"Time thrould: {model.time_threshold.item():.4f}")
             
         # モデル保存

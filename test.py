@@ -30,7 +30,7 @@ def args():
     parser.add_argument("--batch_size", type=int)
     parser.add_argument("--hidden_dim", type=int)
     parser.add_argument("--speaker_state_dim", type=int)
-    parser.add_argument("--pause_dim", type=int)
+    parser.add_argument("--time_dim", type=int)
     parser.add_argument("--heads", type=int)
     parser.add_argument("--local_window_num", type=int)
     parser.add_argument("--dropout_rate", type=float)
@@ -45,7 +45,7 @@ def train(args):
         num_classes=args.num_classes,
         hidden_dim=args.hidden_dim,
         speaker_state_dim=args.speaker_state_dim,
-        pause_dim=args.pause_dim,
+        time_dim=args.time_dim,
         heads=args.heads,
         local_window_num=args.local_window_num,
         dropout_rate=args.dropout_rate,
@@ -135,7 +135,7 @@ def train(args):
         tqdm.write(f"{metrics[f'correct_num_class_{i}']} / {metrics[f'total_num_class_{i}']}  =>  f1: {metrics[f'f1_class_{i}']:.4f}")
 
     # 学習可能閾値を確認1
-    # if (args.pause_dim > 0):
+    # if (args.time_dim > 0):
     #     tqdm.write(f"Learned time threshold: {model.time_threshold.item():.4f}")
 
 
