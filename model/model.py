@@ -33,7 +33,7 @@ class Model(nn.Module):
 
         if (pause_dim > 0):
             # 1x1 の学習可能な time 閾値パラメータ
-            self.time_threshold = nn.Parameter(torch.tensor(0.0))
+            # self.time_threshold = nn.Parameter(torch.tensor(0.0))
             self.time_encoder = Time2Vec(pause_dim=pause_dim)
 
         self.global_attention_1 = BiChannelAttention(heads, self.hidden_dim, pause_dim, "global", 0, dropout_rate)
@@ -58,7 +58,7 @@ class Model(nn.Module):
                 nn.Linear(self.fusion_dim, self.fusion_dim),
             )
         
-        self.decoder = nn.Linear(self.fusion_dim + self.speaker_state_dim, num_classes)
+        self.decoder = nn.Linear(self.fusion_dim + self.speaker_state_dim*2, num_classes)
 
         # speaker状態 更新用のGRU
         self.speaker_gru = nn.GRUCell(self.fusion_dim, self.speaker_state_dim)
@@ -117,7 +117,7 @@ class Model(nn.Module):
         utterance_t = outputs.last_hidden_state[:, 0, :]                                # (B, 768)
 
         if (self.pause_dim > 0):
-            pause_t = torch.relu(pause_t - self.time_threshold)   # (B)
+            # pause_t = torch.relu(pause_t - self.time_threshold)   # (B)
             pause_t = self.time_encoder(pause_t)                  # (B, pause_dim)
         else:
             pause_t = None
@@ -154,6 +154,6 @@ class Model(nn.Module):
         self.renew_speaker_state(speaker_t, fusion_t)
 
         # 分類
-        logits = self.decoder(torch.cat([fusion_t, curr_speaker_state], dim=-1))               # (B, num_classes)
+        logits = self.decoder(torch.cat([fusion_t, curr_speaker_state, curr_listener_state], dim=-1))               # (B, num_classes)
 
         return logits, global_t

@@ -44,7 +44,7 @@ def args():
 
 
 def train(args):
-    exp_name = f"robertaIr{args.roberta_lr}_elseIr{args.else_lr}_hiddenDim{args.hidden_dim}_speakerStateDim{args.speaker_state_dim}_pauseDim{args.pause_dim}_head{args.heads}_localWindowNum{args.local_window_num}_dropout{args.dropout_rate}_AddPause"
+    exp_name = f"robertaIr{args.roberta_lr}_elseIr{args.else_lr}_hiddenDim{args.hidden_dim}_speakerStateDim{args.speaker_state_dim}_pauseDim{args.pause_dim}_head{args.heads}_localWindowNum{args.local_window_num}_dropout{args.dropout_rate}_AddPauseAddSpeed2"
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = Model(
@@ -68,23 +68,28 @@ def train(args):
 
     scaler = GradScaler()
     encoder_param_ids = set(id(p) for p in model.text_encoder.parameters())
-    if (args.pause_dim > 0):
-        time_threshold_param = model.time_threshold
-        other_params = [
-            p for p in model.parameters()
-            if id(p) not in encoder_param_ids and p is not time_threshold_param and p is not None
-        ]
-        optimizer = torch.optim.AdamW([
-            {"params": model.text_encoder.parameters(), "lr": float(args.roberta_lr)},   # RoBERTa 部分
-            {"params": time_threshold_param, "lr": float(1e-3)},                         # time_threshold
-            {"params": other_params, "lr": float(args.else_lr)}                          # それ以外
-        ], betas=(0.9, 0.999), weight_decay=5e-3)
-    else:
-        other_params = [p for p in model.parameters() if id(p) not in encoder_param_ids]
-        optimizer = torch.optim.AdamW([
-            {"params": model.text_encoder.parameters(), "lr": float(args.roberta_lr)},   # RoBERTa 部分
-            {"params": other_params, "lr": float(args.else_lr)}                          # それ以外
-        ], betas=(0.9, 0.999), weight_decay=5e-3)
+    other_params = [p for p in model.parameters() if id(p) not in encoder_param_ids]
+    optimizer = torch.optim.AdamW([
+        {"params": model.text_encoder.parameters(), "lr": float(args.roberta_lr)},   # RoBERTa 部分
+        {"params": other_params, "lr": float(args.else_lr)}                          # それ以外
+    ], betas=(0.9, 0.999), weight_decay=5e-3)
+    # if (args.pause_dim > 0):
+    #     time_threshold_param = model.time_threshold
+    #     other_params = [
+    #         p for p in model.parameters()
+    #         if id(p) not in encoder_param_ids and p is not time_threshold_param and p is not None
+    #     ]
+    #     optimizer = torch.optim.AdamW([
+    #         {"params": model.text_encoder.parameters(), "lr": float(args.roberta_lr)},   # RoBERTa 部分
+    #         {"params": time_threshold_param, "lr": float(1e-4)},                         # time_threshold
+    #         {"params": other_params, "lr": float(args.else_lr)}                          # それ以外
+    #     ], betas=(0.9, 0.999), weight_decay=5e-3)
+    # else:
+    #     other_params = [p for p in model.parameters() if id(p) not in encoder_param_ids]
+    #     optimizer = torch.optim.AdamW([
+    #         {"params": model.text_encoder.parameters(), "lr": float(args.roberta_lr)},   # RoBERTa 部分
+    #         {"params": other_params, "lr": float(args.else_lr)}                          # それ以外
+    #     ], betas=(0.9, 0.999), weight_decay=5e-3)
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=0)
 
     # データセットとデータローダーの準備
@@ -233,8 +238,8 @@ def train(args):
         #     tqdm.write(f"{metrics[f'correct_num_class_{i}']} / {metrics[f'total_num_class_{i}']}  =>  f1: {metrics[f'f1_class_{i}']:.4f}")
 
         # 学習可能パラメーター表示
-        if (args.pause_dim > 0):
-            tqdm.write(f"Time thrould: {model.time_threshold.item():.4f}")
+        # if (args.pause_dim > 0):
+        #     tqdm.write(f"Time thrould: {model.time_threshold.item():.4f}")
             
         # モデル保存
         if (macro_f1 >= best_f1):

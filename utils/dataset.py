@@ -66,7 +66,7 @@ class Dataset(torch.utils.data.Dataset):
 
         for _, utterance_lst in self.data_dct.items():
             conv_data = []   # 1会話分の発話数
-            prev_end_time = 0.0
+            # prev_end_time = 0.0
 
             for i, utterance_file in enumerate(utterance_lst):
                 file_path = f"{self.data_dir_path}/{utterance_file}.json"
@@ -83,10 +83,10 @@ class Dataset(torch.utils.data.Dataset):
                 # 発言内容 => "speaker_name": 発言内容
                 session_id = utterance_file.split("_")[0][:5]
                 speaker_name = self.speaker_dct[session_id][sex]
-                utterance = speaker_name + ": " + utterance
+                name_utterance = speaker_name + ": " + utterance
     
                 tokenizer_output = self.tokenizer(
-                    utterance,
+                    name_utterance,
                     padding=False,
                     truncation=True,
                     max_length=self.max_len,
@@ -94,18 +94,25 @@ class Dataset(torch.utils.data.Dataset):
                     return_attention_mask=False,
                 )
 
-                if (i == 0):
-                    pause = 0.0
-                else:
-                    pause = start_time - prev_end_time
-                prev_end_time = end_time
+                # if (i == 0):
+                #     pause = 0.0
+                # else:
+                #     pause = start_time - prev_end_time
+                # prev_end_time = end_time
+
+                char_num = 0
+                for word in utterance.split():
+                    char_num += len(word)
+                    
+                speed = (end_time - start_time) / char_num
 
                 if (emotion in self.emotion2label):
                     label = self.emotion2label[emotion]
                 else:
                     label = self.ignore_label   # 無視ラベル
 
-                conv_data.append({"input_ids": tokenizer_output["input_ids"], "pause": pause, "speaker": sex, "label": label})
+                # conv_data.append({"input_ids": tokenizer_output["input_ids"], "pause": pause, "speaker": sex, "label": label})
+                conv_data.append({"input_ids": tokenizer_output["input_ids"], "pause": speed, "speaker": sex, "label": label})
             data.append(conv_data)
             
         return data

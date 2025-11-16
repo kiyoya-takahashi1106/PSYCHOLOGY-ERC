@@ -135,8 +135,8 @@ def train(args):
         tqdm.write(f"{metrics[f'correct_num_class_{i}']} / {metrics[f'total_num_class_{i}']}  =>  f1: {metrics[f'f1_class_{i}']:.4f}")
 
     # 学習可能閾値を確認1
-    if (args.pause_dim > 0):
-        tqdm.write(f"Learned time threshold: {model.time_threshold.item():.4f}")
+    # if (args.pause_dim > 0):
+    #     tqdm.write(f"Learned time threshold: {model.time_threshold.item():.4f}")
 
 
 if (__name__ == "__main__"):
