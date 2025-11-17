@@ -8,7 +8,7 @@ ROBERTA_LR="2e-5"
 ELSE_LR="1e-4"
 HIDDEN_DIM=768
 SPEAKER_STATE_DIM=384
-TIME_DIM=6              # TIME_DIM=0なら「間」情報を使わない
+TIME_DIM=0              # TIME_DIM=0なら「間」情報を使わない
 HEADS=6
 LOCAL_WINDOW_NUM=0      # LOCAL_WINDOW_NUM=0なら「LOCAL_Attn」を使わない
 DROPOUT_RATE=0.1
