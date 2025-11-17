@@ -31,6 +31,8 @@ class Model(nn.Module):
             if any(f"encoder.layer.{i}." in n for i in [L-4, L - 3, L - 2, L - 1]):
                 p.requires_grad = True
 
+        # self.down_proj = nn.Linear(768, self.hidden_dim)
+
         if (time_dim > 0):
             # 1x1 の学習可能な time 閾値パラメータ
             # self.time_threshold = nn.Parameter(torch.tensor(0.0))
@@ -42,7 +44,11 @@ class Model(nn.Module):
 
         self.fusion_dim = self.hidden_dim + self.time_dim*self.heads
         
-        self.fusion_norm = nn.LayerNorm(self.fusion_dim)
+        if (local_window_num > 0):
+            self.fusion_norm = nn.LayerNorm(self.fusion_dim*2)
+        else:
+            self.fusion_norm = nn.LayerNorm(self.fusion_dim)
+
         if (local_window_num > 0):
             self.fusion_feed_forward = nn.Sequential(
                 nn.Linear(self.fusion_dim*2, self.fusion_dim),
@@ -76,7 +82,7 @@ class Model(nn.Module):
         self.speaker1_state = torch.zeros(batch_size, self.speaker_state_dim, device=device)   # (B, emotion_dim)
 
 
-    def renew_speaker_state(self, speaker_t: torch.Tensor, fusion_t: torch.Tensor):
+    def renew_state(self, speaker_t: torch.Tensor, fusion_t: torch.Tensor):
         """
         入力:
         speaker_t: (B)  value 0 or 1
@@ -115,6 +121,8 @@ class Model(nn.Module):
         outputs = self.text_encoder(input_ids=input_ids_t, attention_mask=utt_mask_t)   # (B, U_max, 768)
         utterance_t = outputs.last_hidden_state[:, 0, :]                                # (B, 768)
 
+        # utterance_t = self.down_proj(utterance_t)   # (B, hidden_dim)
+
         if (self.time_dim > 0):
             # speed_t = torch.relu(speed_t - self.time_threshold)   # (B)
             speed_t = self.time_encoder(speed_t)                    # (B, time_dim)
@@ -143,14 +151,14 @@ class Model(nn.Module):
             fusion_t = self.fusion_norm(fusion_t)               # (B, (hidden_dim + time_dim*heads)*4)
             fusion_t = self.fusion_feed_forward(fusion_t)       # (B, hidden_dim + time_dim*heads)       
 
+        # speaker状態更新
+        self.renew_state(speaker_t, fusion_t)
+
         # speaker状態
         speaker_mask = (speaker_t == 1)     # (B)
         mask = speaker_mask.unsqueeze(-1)   # (B, 1)
         curr_speaker_state = torch.where(mask, self.speaker1_state, self.speaker0_state)   # (B, emotion_dim)
         curr_listener_state = torch.where(mask, self.speaker0_state, self.speaker1_state)  # (B, emotion_dim)
-
-        # speaker状態更新
-        self.renew_speaker_state(speaker_t, fusion_t)
 
         # 分類
         logits = self.decoder(torch.cat([fusion_t, curr_speaker_state, curr_listener_state], dim=-1))               # (B, num_classes)
