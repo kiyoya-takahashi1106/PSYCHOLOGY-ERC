@@ -13,7 +13,6 @@ import os
 import argparse
 from tqdm import tqdm
 
-# from model.test_model import Model
 from model.model import Model
 from utils.utility import set_seed
 from utils.dataset import Dataset
@@ -44,7 +43,7 @@ def args():
 
 
 def train(args):
-    exp_name = f"robertaIr{args.roberta_lr}_elseIr{args.else_lr}_hiddenDim{args.hidden_dim}_speakerStateDim{args.speaker_state_dim}_timeDim{args.time_dim}_head{args.heads}_localWindowNum{args.local_window_num}_dropout{args.dropout_rate}_AddInteractionGRUAddSpeed"
+    exp_name = f"robertaIr{args.roberta_lr}_elseIr{args.else_lr}_hiddenDim{args.hidden_dim}_speakerStateDim{args.speaker_state_dim}_timeDim{args.time_dim}_head{args.heads}_localWindowNum{args.local_window_num}_dropout{args.dropout_rate}_Complete"
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = Model(
@@ -161,7 +160,8 @@ def train(args):
                 if (torch.all(label_t == -100)):
                     pass
                 else:
-                    loss = criterion(logits, label_t)
+                    with autocast(enabled=False):
+                        loss = criterion(logits.float(), label_t)
                     window_loss_lst.append(loss)
                     task_loss_lst.append(loss.detach().item())
 
