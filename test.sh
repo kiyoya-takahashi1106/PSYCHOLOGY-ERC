@@ -1,5 +1,5 @@
 # --- hyperparams / config (edit as needed) ---
-SEEDS=(42)
+SEEDS=(40 41)
 DATASET_NAME="IEMOCAP"
 CLASS_NUM=6
 BATCH_SIZE=40
@@ -7,14 +7,14 @@ ROBERTA_LR="2e-5"
 ELSE_LR="1e-4"
 HIDDEN_DIM=768
 SPEAKER_STATE_DIM=384
-TIME_DIM=0         # TIME_DIM=0なら「間」情報を使わない
+TIME_DIM=6         # TIME_DIM=0なら「間」情報を使わない
 HEADS=6
 LOCAL_WINDOW_NUM=0
 DROPOUT_RATE=0.1
 
 
 # experiment name (used for log dirs)
-EXP_NAME="robertaIr${ROBERTA_LR}_elseIr${ELSE_LR}_hiddenDim${HIDDEN_DIM}_speakerStateDim${SPEAKER_STATE_DIM}_timeDim${TIME_DIM}_head${HEADS}_localWindowNum${LOCAL_WINDOW_NUM}_dropout${DROPOUT_RATE}_AddLinearInteractionStable"
+EXP_NAME="robertaIr${ROBERTA_LR}_elseIr${ELSE_LR}_hiddenDim${HIDDEN_DIM}_speakerStateDim${SPEAKER_STATE_DIM}_timeDim${TIME_DIM}_head${HEADS}_localWindowNum${LOCAL_WINDOW_NUM}_dropout${DROPOUT_RATE}_NormalCE_AddSpeed"
 
 # logs保存先
 TEST_LOG_DIR="logs/test/${DATASET_NAME}/${EXP_NAME}"

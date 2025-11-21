@@ -24,11 +24,11 @@ class Model(nn.Module):
         # speaker状態 (B, speaker_state_dim), (B, interaction_heads)
         self.speaker0_state = None
         self.speaker1_state = None
-        self.interaction_state = None  
+        # self.interaction_state = None  
 
 
         # ====== ここから Interaction 用 ======
-        self.head_interaction_dim = self.speaker_state_dim // self.interaction_heads
+        # self.head_interaction_dim = self.speaker_state_dim // self.interaction_heads
 
         # self.interaction_speaker_linear = nn.Linear(
         #     self.speaker_state_dim, 
@@ -40,10 +40,10 @@ class Model(nn.Module):
         # )
 
         # heads 次元 (B, H) → (B, interaction_dim)
-        self.interaction_dim = self.speaker_state_dim
-        self.interaction_mlp = nn.Sequential(
-            nn.Linear(self.interaction_heads, self.interaction_dim),
-        )
+        # self.interaction_dim = self.speaker_state_dim
+        # self.interaction_mlp = nn.Sequential(
+        #     nn.Linear(self.interaction_heads, self.interaction_dim),
+        # )
         # ======  Interaction ここまで  ======
 
 
@@ -88,11 +88,11 @@ class Model(nn.Module):
                 nn.Linear(self.fusion_dim, self.fusion_dim),
             )
         
-        self.decoder = nn.Linear(self.fusion_dim + self.speaker_state_dim*2 + self.interaction_dim, num_classes)
+        self.decoder = nn.Linear(self.fusion_dim + self.speaker_state_dim, num_classes)
 
         # speaker状態 更新用のGRU
         self.speaker_gru = nn.GRUCell(self.fusion_dim, self.speaker_state_dim)
-        self.interaction_gru = nn.GRUCell(self.interaction_heads, self.interaction_heads)
+        # self.interaction_gru = nn.GRUCell(self.interaction_heads, self.interaction_heads)
         
         # test用に学習済みモデルをロード
         if (trained_filename is not None):
@@ -105,7 +105,7 @@ class Model(nn.Module):
         device = next(self.parameters()).device
         self.speaker0_state = torch.zeros(batch_size, self.speaker_state_dim, device=device)     # (B, emotion_dim)
         self.speaker1_state = torch.zeros(batch_size, self.speaker_state_dim, device=device)     # (B, emotion_dim)
-        self.interaction_state = torch.zeros(batch_size, self.interaction_heads, device=device)  # (B, interaction_heads)
+        # self.interaction_state = torch.zeros(batch_size, self.interaction_heads, device=device)  # (B, interaction_heads)
 
 
     def renew_state(self, speaker_t: torch.Tensor, fusion_t: torch.Tensor):
@@ -124,7 +124,6 @@ class Model(nn.Module):
 
         # update state with GRUCell: input=gru_input, hx=current_emotion  
         next_speaker_state = self.speaker_gru(fusion_t, curr_speaker_state)                    # (B, emotion_dim)
-        # next_listener_state = self.listener_gru(fusion_t, curr_listener_state)                 # (B, emotion_dim)
 
         # 更新
         self.speaker0_state = torch.where(mask, curr_listener_state, next_speaker_state)   # (B, emotion_dim)
@@ -137,38 +136,38 @@ class Model(nn.Module):
         # self.interaction_state =  self.interaction_state.detach()
 
 
-    def cul_interaction(self, curr_speaker_state: torch.Tensor, curr_listener_state: torch.Tensor) -> torch.Tensor:
-        """
-        入力:
-        curr_speaker_state:  (B, emotion_dim)
-        curr_listener_state: (B, emotion_dim)
-        出力:
-        interaction:         (B, interaction_dim)
-        """
-        B, _ = curr_speaker_state.size()
+    # def cul_interaction(self, curr_speaker_state: torch.Tensor, curr_listener_state: torch.Tensor) -> torch.Tensor:
+    #     """
+    #     入力:
+    #     curr_speaker_state:  (B, emotion_dim)
+    #     curr_listener_state: (B, emotion_dim)
+    #     出力:
+    #     interaction:         (B, interaction_dim)
+    #     """
+    #     B, _ = curr_speaker_state.size()
 
-        # (B, D) → (B, interacton_heads * head_interaction_dim)
-        # curr_speaker_state = self.interaction_speaker_linear(curr_speaker_state)
-        # curr_listener_state = self.interaction_speaker_linear(curr_listener_state)
-        curr_speaker_state = torch.stack(torch.chunk(curr_speaker_state, self.interaction_heads, dim=-1), dim=1)
-        curr_listener_state = torch.stack(torch.chunk(curr_listener_state, self.interaction_heads, dim=-1), dim=1)
+    #     # (B, D) → (B, interacton_heads * head_interaction_dim)
+    #     # curr_speaker_state = self.interaction_speaker_linear(curr_speaker_state)
+    #     # curr_listener_state = self.interaction_speaker_linear(curr_listener_state)
+    #     curr_speaker_state = torch.stack(torch.chunk(curr_speaker_state, self.interaction_heads, dim=-1), dim=1)
+    #     curr_listener_state = torch.stack(torch.chunk(curr_listener_state, self.interaction_heads, dim=-1), dim=1)
 
-        # (B, interacton_heads * head_interaction_dim) → (B, interacton_heads, head_interaction_dim)
-        curr_speaker_state = curr_speaker_state.view(B, self.interaction_heads, self.head_interaction_dim)
-        curr_listener_state = curr_listener_state.view(B, self.interaction_heads, self.head_interaction_dim)
+    #     # (B, interacton_heads * head_interaction_dim) → (B, interacton_heads, head_interaction_dim)
+    #     curr_speaker_state = curr_speaker_state.view(B, self.interaction_heads, self.head_interaction_dim)
+    #     curr_listener_state = curr_listener_state.view(B, self.interaction_heads, self.head_interaction_dim)
 
-        # 各ヘッドごとに内積 → (B, interacton_heads)
-        relations = (curr_speaker_state * curr_listener_state).sum(dim=-1) / math.sqrt(self.head_interaction_dim)
-        relations = torch.tanh(relations)
+    #     # 各ヘッドごとに内積 → (B, interacton_heads)
+    #     relations = (curr_speaker_state * curr_listener_state).sum(dim=-1) / math.sqrt(self.head_interaction_dim)
+    #     relations = torch.tanh(relations)
 
-        # gruでinteraction状態更新
-        next_interaction_state = self.interaction_gru(relations, self.interaction_state)   # (B, interaction_heads)
-        self.interaction_state = next_interaction_state
+    #     # gruでinteraction状態更新
+    #     next_interaction_state = self.interaction_gru(relations, self.interaction_state)   # (B, interaction_heads)
+    #     self.interaction_state = next_interaction_state
 
-        # MLP で (B, interaction_dim) アップサンプリング
-        interaction = self.interaction_mlp(relations)   # (B, interaction_dim)
+    #     # MLP で (B, interaction_dim) アップサンプリング
+    #     interaction = self.interaction_mlp(relations)   # (B, interaction_dim)
 
-        return interaction
+    #     return interaction
     
 
     def forward(self, t: int, input_ids_t: torch.Tensor, time_mask: torch.Tensor, utt_mask_t: torch.Tensor, speed_t: torch.Tensor, pause_t: torch.Tensor, cache: torch.Tensor, speakers: torch.Tensor) -> torch.Tensor:
@@ -196,7 +195,7 @@ class Model(nn.Module):
             per_head_content_t = [torch.cat([chunk, speed_t], dim=-1) for chunk in utterance_t_chunks]   # (head, B, hidden_dim/head + time_dim)
         else:
             per_head_content_t = [chunk for chunk in utterance_t_chunks]                                 # (head, B, hidden_dim/head)
-        content_t = torch.cat(per_head_content_t, dim=-1)                                                # (B, (hidden_dim/head + time_dim)*heads)  =  (B, hidden_dim + time_dim*heads)
+        content_t = torch.cat(per_head_content_t, dim=-1)                                                # (B, (hidden_dim/head + time_dim)*heads)
 
         global_t = self.global_attention_1(t, content_t, time_mask, cache, speakers)                     # (B, hidden_dim + time_dim*heads)
         if (self.local_window_num > 0):
@@ -218,12 +217,12 @@ class Model(nn.Module):
         # speaker状態
         speaker_mask = (speaker_t == 1)     # (B)
         mask = speaker_mask.unsqueeze(-1)   # (B, 1)
-        curr_speaker_state = torch.where(mask, self.speaker1_state, self.speaker0_state)   # (B, emotion_dim)
-        curr_listener_state = torch.where(mask, self.speaker0_state, self.speaker1_state)  # (B, emotion_dim)
+        curr_speaker_state = torch.where(mask, self.speaker1_state, self.speaker0_state)    # (B, emotion_dim)
+        curr_listener_state = torch.where(mask, self.speaker0_state, self.speaker1_state)   # (B, emotion_dim)
 
-        interaction = self.cul_interaction(curr_speaker_state, curr_listener_state)
+        # interaction = self.cul_interaction(curr_speaker_state, curr_listener_state)
 
         # 分類
-        logits = self.decoder(torch.cat([fusion_t, curr_speaker_state, curr_listener_state, interaction], dim=-1))               # (B, num_classes)
+        logits = self.decoder(torch.cat([global_t, curr_speaker_state], dim=-1))   # (B, num_classes)
 
         return logits, global_t

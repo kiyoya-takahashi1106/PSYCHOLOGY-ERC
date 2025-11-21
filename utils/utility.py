@@ -30,9 +30,9 @@ def make_weighted_ce(counts, device):
     weights = 1.0 / (counts + 1e-12)   # ゼロ割り防止
     weights = weights / weights.mean()
     weights = weights.to(device=device, dtype=torch.float32)
-    # print("Class Weights:", weights.tolist())
 
     criterion = nn.CrossEntropyLoss(weight=weights.to(device),  reduction='mean', ignore_index=-100)
+    # criterion = nn.CrossEntropyLoss(reduction='mean', ignore_index=-100)
 
     return criterion
 
@@ -59,5 +59,3 @@ def calculate_metrics(y_pred: list, y_true: list):
         metrics[f"total_num_class_{i}"] = total_counter[i]        # クラスiのサンプル数
 
     return metrics
-
-
