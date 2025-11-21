@@ -43,7 +43,7 @@ def args():
 
 
 def train(args):
-    exp_name = f"robertaIr{args.roberta_lr}_elseIr{args.else_lr}_hiddenDim{args.hidden_dim}_speakerStateDim{args.speaker_state_dim}_timeDim{args.time_dim}_head{args.heads}_localWindowNum{args.local_window_num}_dropout{args.dropout_rate}_BaseLine"
+    exp_name = f"robertaIr{args.roberta_lr}_elseIr{args.else_lr}_hiddenDim{args.hidden_dim}_speakerStateDim{args.speaker_state_dim}_timeDim{args.time_dim}_head{args.heads}_localWindowNum{args.local_window_num}_dropout{args.dropout_rate}_Complete"
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = Model(
@@ -252,8 +252,8 @@ def train(args):
         #     tqdm.write(f"Time thrould: {model.time_threshold.item():.4f}")
             
         # モデル保存
-        if (macro_f1 >= best_f1):
-            best_f1 = macro_f1
+        if (weighted_f1 >= best_f1):
+            best_f1 = weighted_f1
             os.makedirs(
                 f"saved_models/{args.dataset}/"
                 f"best_{exp_name}/", exist_ok=True
@@ -266,10 +266,10 @@ def train(args):
             # 両方に保存（best_model_path* は毎回上書きされる）
             torch.save(model.state_dict(), best_model_path)
 
-            tqdm.write(f"We've saved the new model (Macro F1 Score: {macro_f1:.4f})")
+            tqdm.write(f"We've saved the new model (Weighted F1 Score: {weighted_f1:.4f})")
         tqdm.write("----------------------------------------------------------------------------")
 
-    tqdm.write(f"Best Macro F1 Score: {best_f1:.4f}")
+    tqdm.write(f"Best Weighted F1 Score: {best_f1:.4f}")
     writer.close()
     return
 
