@@ -58,7 +58,7 @@ class Model(nn.Module):
                 nn.Linear(self.fusion_dim, self.fusion_dim),
             )
         
-        self.decoder = nn.Linear(self.fusion_dim + self.speaker_state_dim*2, num_classes)
+        self.decoder = nn.Linear(self.fusion_dim + self.speaker_state_dim, num_classes)
 
         # speaker状態 更新用のGRU
         self.speaker_gru = nn.GRUCell(self.fusion_dim, self.speaker_state_dim)
@@ -143,16 +143,17 @@ class Model(nn.Module):
             fusion_t = self.fusion_norm(fusion_t)               # (B, (hidden_dim + time_dim*heads)*4)
             fusion_t = self.fusion_feed_forward(fusion_t)       # (B, hidden_dim + time_dim*heads)       
 
+        # speaker状態更新
+        self.renew_speaker_state(speaker_t, fusion_t)
+        
         # speaker状態
         speaker_mask = (speaker_t == 1)     # (B)
         mask = speaker_mask.unsqueeze(-1)   # (B, 1)
         curr_speaker_state = torch.where(mask, self.speaker1_state, self.speaker0_state)   # (B, emotion_dim)
         curr_listener_state = torch.where(mask, self.speaker0_state, self.speaker1_state)  # (B, emotion_dim)
 
-        # speaker状態更新
-        self.renew_speaker_state(speaker_t, fusion_t)
 
         # 分類
-        logits = self.decoder(torch.cat([fusion_t, curr_speaker_state, curr_listener_state], dim=-1))               # (B, num_classes)
+        logits = self.decoder(torch.cat([fusion_t, curr_speaker_state], dim=-1))               # (B, num_classes)
 
         return logits, global_t
