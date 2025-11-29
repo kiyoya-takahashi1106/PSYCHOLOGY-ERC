@@ -6,7 +6,8 @@ import math
 from transformers import RobertaModel
 
 from model.time2vec import Time2Vec
-from model.bi_channel_attention import BiChannelAttention
+# from model.bi_channel_attention import BiChannelAttention
+from model.normal_attention import BiChannelAttention
 
 
 class Model(nn.Module):
@@ -31,7 +32,7 @@ class Model(nn.Module):
         self.head_interaction_dim = self.speaker_state_dim // self.interaction_heads
 
         # heads 次元 (B, H) → (B, interaction_dim)
-        self.interaction_dim = self.speaker_state_dim // 2
+        self.interaction_dim = self.speaker_state_dim
         self.interaction_mlp = nn.Sequential(
             nn.Linear(self.interaction_heads, self.interaction_dim),
         )
@@ -73,12 +74,12 @@ class Model(nn.Module):
                 nn.Linear(self.fusion_dim, self.fusion_dim),
             )
         
-        self.decoder = nn.Linear(self.fusion_dim + self.speaker_state_dim + self.interaction_dim, num_classes)
+        self.decoder = nn.Linear(self.fusion_dim + self.speaker_state_dim, num_classes)
 
         # speaker状態 更新用のGRU
         self.speaker_gru = nn.GRUCell(self.fusion_dim, self.speaker_state_dim)
         self.interaction_gru = nn.GRUCell(self.interaction_heads, self.interaction_heads)
-        
+
         # test用に学習済みモデルをロード
         if (trained_filename is not None):
             file_path = f"./saved_models/IEMOCAP/{trained_filename}"
@@ -187,9 +188,10 @@ class Model(nn.Module):
 
         # 2つのattention特徴のfusion
         if (self.local_window_num > 0):
-            fusion_t = torch.cat([global_t, local_t], dim=-1)   # (B, (hidden_dim + time_dim*heads)*2)
-            fusion_t = self.fusion_norm(fusion_t)               # (B, (hidden_dim + time_dim*heads)*4)
-            fusion_t = self.fusion_feed_forward(fusion_t)       # (B, hidden_dim + time_dim*heads)
+            pass
+            # fusion_t = torch.cat([global_t, local_t], dim=-1)   # (B, (hidden_dim + time_dim*heads)*2)
+            # fusion_t = self.fusion_norm(fusion_t)               # (B, (hidden_dim + time_dim*heads)*4)
+            # fusion_t = self.fusion_feed_forward(fusion_t)       # (B, hidden_dim + time_dim*heads)
         else:
             fusion_t = global_t                                 # (B, hidden_dim + time_dim*heads)
             fusion_t = self.fusion_norm(fusion_t)               # (B, (hidden_dim + time_dim*heads)*4)
@@ -204,9 +206,10 @@ class Model(nn.Module):
         curr_speaker_state = torch.where(mask, self.speaker1_state, self.speaker0_state)   # (B, emotion_dim)
         curr_listener_state = torch.where(mask, self.speaker0_state, self.speaker1_state)  # (B, emotion_dim)
 
-        interaction = self.cul_interaction(curr_speaker_state, curr_listener_state) 
+        # interaction = self.cul_interaction(curr_speaker_state, curr_listener_state) 
 
         # 分類
-        logits = self.decoder(torch.cat([fusion_t, curr_speaker_state, interaction], dim=-1))               # (B, num_classes)
+        logits = self.decoder(torch.cat([fusion_t, curr_speaker_state], dim=-1))   # (B, num_classes)
 
-        return logits, global_t
+
+        return logits, fusion_t
